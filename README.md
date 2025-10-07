@@ -1,24 +1,17 @@
-# RetireWise (React + Vite)
+# RetireWise Frontend (Railway-ready)
 
-A minimal React frontend wired to a FastAPI backend for retirement planning.
+## Deploy on Railway
+1. Push this folder to GitHub.
+2. Railway → New Project → Deploy from Repo.
+3. In the **Variables** tab, add:
+   ```
+   VITE_API_BASE_URL=https://retirewise-backend-production.up.railway.app
+   ```
+4. Deploy. Railway will run `npm ci && npm run build` then `npm run preview` (see `railway.toml`).
 
-## Quick Start
+## Local dev
 ```bash
 npm install
 npm run dev
 ```
-
-Set the backend URL by creating a `.env` file:
-```bash
-cp .env.example .env
-# edit .env to point to your deployed FastAPI URL
-```
-
-Build for production:
-```bash
-npm run build
-```
-
-## Deploy
-- **Vercel**: Connect repo, set `VITE_API_BASE_URL` env var, build command `npm run build`, output `dist`.
-- **Netlify**: Same; `netlify.toml` included.
+Create `.env` from `.env.example` and set your backend URL.

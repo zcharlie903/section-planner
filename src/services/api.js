@@ -1,7 +1,7 @@
 // SAFER API CLIENT — prevents //calculate and fails loud if env is missing
 const RAW = import.meta.env.VITE_API_BASE_URL;
 if (!RAW) {
-  throw new Error("VITE_API_BASE_URL is not set. Set it in Railway (frontend service) and redeploy.");
+  throw new Error("VITE_API_BASE_URL is not set. Set it in Railway (frontend service) → Variables and redeploy.");
 }
 const BASE_URL = RAW.replace(/\/+$/, "");
 
