@@ -1,21 +1,21 @@
+
 {
-  "name": "retirewise-frontend",
+  "name": "section-planner",
   "private": true,
   "version": "0.2.1",
   "type": "module",
   "scripts": {
     "dev": "vite",
     "build": "vite build",
-    "start": "serve -s dist -l $PORT",
-    "preview": "vite preview --host 0.0.0.0 --port ${PORT:-4173}"
+    "start": "serve -s dist -l $PORT"
   },
   "dependencies": {
     "react": "^18.2.0",
-    "react-dom": "^18.2.0"
+    "react-dom": "^18.2.0",
+    "serve": "^14.2.1"
   },
   "devDependencies": {
     "@vitejs/plugin-react": "^4.3.0",
-    "serve": "^14.2.1",
     "vite": "^5.1.0"
   }
 }

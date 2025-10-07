@@ -1,13 +1,11 @@
-# Railway config for a single-service Vite (React) frontend
-# Place at repo root as `railway.toml`
+# railway.toml — Frontend (React + Vite) on Railway
+# Serves your production build using `serve`, binding to Railway's $PORT
 
 [build]
 builder = "NIXPACKS"
 
 [deploy]
-# Build the production bundle in /dist
-buildCommand = "npm ci && npm run build"
-
-# Serve the built files. Using Vite preview binds to $PORT.
-startCommand = "npm run preview"
+# Use npm install if you don't have a package-lock.json; otherwise use npm ci
+buildCommand = "npm install && npm run build"
+startCommand = "npm run start"
 healthcheckPath = "/index.html"
