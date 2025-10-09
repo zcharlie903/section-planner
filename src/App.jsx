@@ -43,8 +43,31 @@ function ageAtDate(dobStr, dateStr) {
   if (beforeBirthday) age -= 1;
   return age;
 }
+// NEW: compute DOB from an Age, preserving month/day from existing DOB if present.
+function dobFromAge(ageYears, referenceDobStr) {
+  const today = new Date();
+  let month = today.getMonth(); // 0-based
+  let day = today.getDate();
+  if (referenceDobStr) {
+    const ref = parseISODate(referenceDobStr);
+    if (ref) { month = ref.getMonth(); day = ref.getDate(); }
+  }
+  const birthdayThisYear = new Date(today.getFullYear(), month, day);
+  const birthdayHasPassed = today >= birthdayThisYear;
+  let year = today.getFullYear() - Number(ageYears);
+  if (!birthdayHasPassed) year -= 1;
+  // Handle 2/29 fallback
+  if (month === 1 && day === 29) {
+    // If not leap year, fallback to 2/28
+    const dt = new Date(year, 1, 29);
+    if (Number.isNaN(dt.getTime()) || dt.getMonth() !== 1 || dt.getDate() !== 29) {
+      return toISODate(new Date(year, 1, 28));
+    }
+  }
+  return toISODate(new Date(year, month, day));
+}
 
-// ---------- SSA estimator (same shape as backend; simplified) ----------
+// ---------- SSA estimator (simplified, mirrors backend) ----------
 function estimateSSMonthly(incomeAnnual, retirementAge, worked30) {
   if (!incomeAnnual || !retirementAge) return null;
   let baseFull = Math.min(3500.0, 0.42 * incomeAnnual / 12.0);
@@ -62,7 +85,7 @@ function estimateSSMonthly(incomeAnnual, retirementAge, worked30) {
 export default function App() {
   // Timeline
   const [dob, setDob] = useState("1990-01-01");
-  const [age, setAge] = useState(35);              // shown as 'Age' in the timeline
+  const [age, setAge] = useState(35);
   const [retirementAge, setRetirementAge] = useState(65);
   const [retirementDate, setRetirementDate] = useState(dateAtAge(dob, 65));
 
@@ -77,7 +100,7 @@ export default function App() {
   const [contribTaxDeferred, setContribTaxDeferred] = useState(2500);
   const [contribTaxFree, setContribTaxFree] = useState(0);
 
-  // Savings buckets
+  // Savings
   const [savAfterTax, setSavAfterTax] = useState(10000);
   const [savTaxDeferred, setSavTaxDeferred] = useState(500000);
   const [savTaxFree, setSavTaxFree] = useState(100000);
@@ -87,8 +110,8 @@ export default function App() {
   const [pensionYearly, setPensionYearly] = useState(0);
 
   // Social Security
-  const [ssStartAge, setSsStartAge] = useState(67);  // FRA default
-  const [ssMonthly, setSsMonthly] = useState(null);  // auto-prefill based on income (30-yr avg)
+  const [ssStartAge, setSsStartAge] = useState(67);
+  const [ssMonthly, setSsMonthly] = useState(null);
   const [worked30, setWorked30] = useState(false);
 
   // Debts
@@ -98,13 +121,31 @@ export default function App() {
   const [error, setError] = useState("");
   const [result, setResult] = useState(null);
 
-  // Derived helpers
-  const autoAge = ageFromDOB(dob);        // compute from DOB
-  // If user typed age manually, prefer that; else use auto
-  const currentAge = (age ?? autoAge ?? 30);
+  // Derived
+  const autoAge = ageFromDOB(dob);
+  const currentAge = age ?? autoAge ?? 30;
   const netWorth = (savAfterTax || 0) + (savTaxDeferred || 0) + (savTaxFree || 0);
 
-  // ---------- Keep timeline in sync ----------
+  // ---- Sync: when DOB changes, recompute Age and keep retirement date aligned
+  function onDobChange(nextDob) {
+    setDob(nextDob);
+    const a = ageFromDOB(nextDob);
+    if (a != null) setAge(a);         // always update Age to match DOB
+    const d = dateAtAge(nextDob, retirementAge);
+    if (d) setRetirementDate(d);
+  }
+
+  // ---- Sync: when Age changes, recompute DOB (preserve month/day), and keep retirement date aligned
+  function onAgeChange(nextAge) {
+    const v = Number(nextAge);
+    setAge(v);
+    const nextDob = dobFromAge(v, dob);
+    if (nextDob) setDob(nextDob);     // always update DOB to match Age
+    const d = dateAtAge(nextDob || dob, retirementAge);
+    if (d) setRetirementDate(d);
+  }
+
+  // ---- Sync: Retirement age/date
   function onRetirementAgeChange(val) {
     const v = Number(val);
     setRetirementAge(v);
@@ -116,17 +157,9 @@ export default function App() {
     const a = ageAtDate(dob, s);
     if (a != null) setRetirementAge(a);
   }
-  function onDobChange(s) {
-    setDob(s);
-    setRetirementDate(dateAtAge(s, retirementAge));
-    // auto recompute visible age if user didn't set it manually
-    const a = ageFromDOB(s);
-    if (a != null && (age === null || age === undefined)) setAge(a);
-  }
 
-  // ---------- Auto-prefill SS monthly based on income as 30-yr avg ----------
+  // Auto-prefill SS monthly from income (30-yr avg assumption) unless user typed one
   useEffect(() => {
-    // Only prefill if user hasn't entered a value
     if (ssMonthly === null || ssMonthly === "") {
       const est = estimateSSMonthly(income, retirementAge || ssStartAge || 67, worked30);
       if (est != null) setSsMonthly(est);
@@ -139,7 +172,6 @@ export default function App() {
     setLoading(true);
     setError("");
     setResult(null);
-
     try {
       const payload = {
         // Timeline
@@ -147,26 +179,22 @@ export default function App() {
         currentAge,
         retirementAge,
         retirementDate,
-
         // Econ
         income,
         expenses,
         netWorth,
         returnRate,
         inflationRate,
-
         // Contributions
         contribAfterTax,
         contribTaxDeferred,
         contribTaxFree,
-
         // Pension / SS
         pensionStart,
         pensionYearly,
         ssStartAge,
-        ssMonthly,     // may be our auto-prefill; backend still estimates if missing
+        ssMonthly,
         worked30,
-
         // Debts
         debts,
       };
@@ -184,7 +212,7 @@ export default function App() {
       <h1 className="text-3xl font-extrabold mb-2">RetireWise – Retirement Planner</h1>
 
       <form onSubmit={handleSubmit} className="space-y-4">
-        {/* NEW combined section: Identity & Timeline */}
+        {/* Combined: Identity & Timeline (DOB, Age, Retirement Age, Retirement Date) */}
         <Section title="Identity & Timeline">
           <div className="grid grid-cols-2 gap-4">
             <label className="block">
@@ -202,13 +230,7 @@ export default function App() {
                 className="w-full border rounded-lg px-3 py-2"
                 type="number"
                 value={age}
-                onChange={(e) => {
-                  const v = Number(e.target.value);
-                  setAge(v);
-                  // If DOB is set, keep retirement date in sync w/ retirementAge
-                  const d = dateAtAge(dob, retirementAge);
-                  if (d) setRetirementDate(d);
-                }}
+                onChange={(e) => onAgeChange(e.target.value)}
               />
             </label>
             <label className="block">
@@ -231,52 +253,27 @@ export default function App() {
             </label>
           </div>
           <p className="text-sm text-gray-600 mt-2">
-            DOB + Age ↔ Retirement Age/Date stay in sync. FRA for Social Security is typically 67.
+            Change <b>DOB</b> or <b>Age</b> — the other updates automatically. Retirement Age/Date also stay in sync.
           </p>
         </Section>
 
-        {/* Core Assumptions (now WITHOUT the age field) */}
         <Section title="Core Assumptions">
           <div className="grid grid-cols-2 gap-4">
             <label className="block">
               <div className="text-sm mb-1">Current Annual Income ($)</div>
-              <input
-                className="w-full border rounded-lg px-3 py-2"
-                type="number"
-                step="0.01"
-                value={income}
-                onChange={(e) => setIncome(Number(e.target.value))}
-              />
+              <input className="w-full border rounded-lg px-3 py-2" type="number" step="0.01" value={income} onChange={(e)=>setIncome(Number(e.target.value))} />
             </label>
             <label className="block">
               <div className="text-sm mb-1">Annual Expenses ($)</div>
-              <input
-                className="w-full border rounded-lg px-3 py-2"
-                type="number"
-                step="0.01"
-                value={expenses}
-                onChange={(e) => setExpenses(Number(e.target.value))}
-              />
+              <input className="w-full border rounded-lg px-3 py-2" type="number" step="0.01" value={expenses} onChange={(e)=>setExpenses(Number(e.target.value))} />
             </label>
             <label className="block">
               <div className="text-sm mb-1">Expected Return Rate (e.g., 0.05)</div>
-              <input
-                className="w-full border rounded-lg px-3 py-2"
-                type="number"
-                step="0.0001"
-                value={returnRate}
-                onChange={(e) => setReturnRate(Number(e.target.value))}
-              />
+              <input className="w-full border rounded-lg px-3 py-2" type="number" step="0.0001" value={returnRate} onChange={(e)=>setReturnRate(Number(e.target.value))} />
             </label>
             <label className="block">
               <div className="text-sm mb-1">Inflation Rate (e.g., 0.02)</div>
-              <input
-                className="w-full border rounded-lg px-3 py-2"
-                type="number"
-                step="0.0001"
-                value={inflationRate}
-                onChange={(e) => setInflationRate(Number(e.target.value))}
-              />
+              <input className="w-full border rounded-lg px-3 py-2" type="number" step="0.0001" value={inflationRate} onChange={(e)=>setInflationRate(Number(e.target.value))} />
             </label>
           </div>
         </Section>
@@ -306,7 +303,6 @@ export default function App() {
           setStartDate={setPensionStart}
         />
 
-        {/* Keep your existing SS section but it will now be prefilled */}
         <SocialSecuritySection
           startingAge={ssStartAge}
           setStartingAge={setSsStartAge}
