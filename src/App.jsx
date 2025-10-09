@@ -4,10 +4,10 @@ import ContributionSection from "./components/ContributionSection";
 import CurrentSavingsSection from "./components/CurrentSavingsSection";
 import PensionSection from "./components/PensionSection";
 import SocialSecuritySection from "./components/SocialSecuritySection";
+import DebtsSection from "./components/DebtsSection";
 import Section from "./components/Section";
 
 export default function App() {
-  // Core fields
   const [currentAge, setCurrentAge] = useState(30);
   const [retirementAge, setRetirementAge] = useState(65);
   const [income, setIncome] = useState(90000);
@@ -15,30 +15,27 @@ export default function App() {
   const [returnRate, setReturnRate] = useState(0.05);
   const [inflationRate, setInflationRate] = useState(0.02);
 
-  // Contributions (annual)
   const [contribAfterTax, setContribAfterTax] = useState(1000);
   const [contribTaxDeferred, setContribTaxDeferred] = useState(2500);
   const [contribTaxFree, setContribTaxFree] = useState(0);
 
-  // Current savings buckets
   const [savAfterTax, setSavAfterTax] = useState(10000);
   const [savTaxDeferred, setSavTaxDeferred] = useState(500000);
   const [savTaxFree, setSavTaxFree] = useState(100000);
 
-  // Pension
   const [pensionStart, setPensionStart] = useState("2035-01-01");
   const [pensionYearly, setPensionYearly] = useState(0);
 
-  // Social Security
   const [ssStartAge, setSsStartAge] = useState(62);
   const [ssMonthly, setSsMonthly] = useState(1925);
+
+  const [debts, setDebts] = useState([]);
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [result, setResult] = useState(null);
 
   const netWorth = (savAfterTax || 0) + (savTaxDeferred || 0) + (savTaxFree || 0);
-  const debt = 0; // extend later with a DebtSection
 
   async function handleSubmit(e) {
     e.preventDefault();
@@ -53,10 +50,8 @@ export default function App() {
         income,
         expenses,
         netWorth,
-        debt,
         returnRate,
         inflationRate,
-        // additional fields (future use)
         contribAfterTax,
         contribTaxDeferred,
         contribTaxFree,
@@ -64,6 +59,7 @@ export default function App() {
         pensionYearly,
         ssStartAge,
         ssMonthly,
+        debts, // NEW
       };
       const data = await postCalculate(payload);
       setResult(data);
@@ -77,7 +73,6 @@ export default function App() {
   return (
     <div className="max-w-3xl mx-auto p-6">
       <h1 className="text-3xl font-extrabold mb-2">RetireWise – Retirement Planner</h1>
-      <p className="text-gray-600 mb-6">Enter your details. </p>
 
       <form onSubmit={handleSubmit} className="space-y-4">
         <Section title="Core Assumptions">
@@ -140,6 +135,8 @@ export default function App() {
           monthlyBenefit={ssMonthly}
           setMonthlyBenefit={setSsMonthly}
         />
+
+        <DebtsSection debts={debts} setDebts={setDebts} />
 
         <button
           type="submit"
