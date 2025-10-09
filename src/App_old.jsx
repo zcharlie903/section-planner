@@ -1,4 +1,3 @@
-
 import React, { useState } from "react";
 import { postCalculate } from "./services/api";
 import ContributionSection from "./components/ContributionSection";
@@ -8,48 +7,9 @@ import SocialSecuritySection from "./components/SocialSecuritySection";
 import DebtsSection from "./components/DebtsSection";
 import Section from "./components/Section";
 
-function toISODate(d) {
-  if (!d || Number.isNaN(d.getTime())) return "";
-  const m = d.getMonth() + 1;
-  const day = d.getDate();
-  return [d.getFullYear(), String(m).padStart(2, "0"), String(day).padStart(2, "0")].join("-");
-}
-function parseISODate(s) {
-  if (!s) return null;
-  const d = new Date(s);
-  return Number.isNaN(d.getTime()) ? null : d;
-}
-function ageFromDOB(dobStr, asOf = new Date()) {
-  const dob = parseISODate(dobStr);
-  if (!dob) return null;
-  let age = asOf.getFullYear() - dob.getFullYear();
-  const beforeBirthday = asOf < new Date(asOf.getFullYear(), dob.getMonth(), dob.getDate());
-  if (beforeBirthday) age -= 1;
-  return age;
-}
-function dateAtAge(dobStr, ageYears) {
-  const dob = parseISODate(dobStr);
-  if (!dob || ageYears == null || Number.isNaN(ageYears)) return "";
-  const d = new Date(dob);
-  d.setFullYear(d.getFullYear() + Number(ageYears));
-  return toISODate(d);
-}
-function ageAtDate(dobStr, dateStr) {
-  const dob = parseISODate(dobStr);
-  const target = parseISODate(dateStr);
-  if (!dob || !target) return null;
-  let age = target.getFullYear() - dob.getFullYear();
-  const beforeBirthday = target < new Date(target.getFullYear(), dob.getMonth(), dob.getDate());
-  if (beforeBirthday) age -= 1;
-  return age;
-}
-
 export default function App() {
-  const [dob, setDob] = useState("1990-01-01");
-  const [retirementAge, setRetirementAge] = useState(65);
-  const [retirementDate, setRetirementDate] = useState(dateAtAge(dob, 65));
-
   const [currentAge, setCurrentAge] = useState(30);
+  const [retirementAge, setRetirementAge] = useState(65);
   const [income, setIncome] = useState(90000);
   const [expenses, setExpenses] = useState(50000);
   const [returnRate, setReturnRate] = useState(0.05);
@@ -68,7 +28,6 @@ export default function App() {
 
   const [ssStartAge, setSsStartAge] = useState(62);
   const [ssMonthly, setSsMonthly] = useState(1925);
-  const [worked30, setWorked30] = useState(false);  // will fix to lowercase true/false later if needed
 
   const [debts, setDebts] = useState([]);
 
@@ -76,30 +35,14 @@ export default function App() {
   const [error, setError] = useState("");
   const [result, setResult] = useState(null);
 
-  const autoAge = ageFromDOB(dob) ?? currentAge;
   const netWorth = (savAfterTax || 0) + (savTaxDeferred || 0) + (savTaxFree || 0);
-
-  function onRetirementAgeChange(val) {
-    const v = Number(val);
-    setRetirementAge(v);
-    const d = dateAtAge(dob, v);
-    if (d) setRetirementDate(d);
-  }
-  function onRetirementDateChange(s) {
-    setRetirementDate(s);
-    const a = ageAtDate(dob, s);
-    if (a != null) setRetirementAge(a);
-  }
-  function onDobChange(s) {
-    setDob(s);
-    setRetirementDate(dateAtAge(s, retirementAge));
-  }
 
   async function handleSubmit(e) {
     e.preventDefault();
     setLoading(true);
     setError("");
     setResult(null);
+
     try {
       const payload = {
         currentAge,
@@ -116,10 +59,7 @@ export default function App() {
         pensionYearly,
         ssStartAge,
         ssMonthly,
-        debts,
-        dob,
-        retirementDate,
-        worked30,
+        debts, // NEW
       };
       const data = await postCalculate(payload);
       setResult(data);
@@ -133,31 +73,12 @@ export default function App() {
   return (
     <div className="max-w-3xl mx-auto p-6">
       <h1 className="text-3xl font-extrabold mb-2">RetireWise – Retirement Planner</h1>
-      <form onSubmit={handleSubmit} className="space-y-4">
-        <Section title="Identity & Timeline">
-          <div className="grid grid-cols-2 gap-4">
-            <label className="block">
-              <div className="text-sm mb-1">Date of Birth</div>
-              <input className="w-full border rounded-lg px-3 py-2" type="date" value={dob} onChange={(e)=>onDobChange(e.target.value)} />
-            </label>
-            <div className="grid grid-cols-2 gap-4">
-              <label className="block">
-                <div className="text-sm mb-1">Retirement Age</div>
-                <input className="w-full border rounded-lg px-3 py-2" type="number" value={retirementAge} onChange={(e)=>onRetirementAgeChange(e.target.value)} />
-              </label>
-              <label className="block">
-                <div className="text-sm mb-1">Retirement Date</div>
-                <input className="w-full border rounded-lg px-3 py-2" type="date" value={retirementDate || ""} onChange={(e)=>onRetirementDateChange(e.target.value)} />
-              </label>
-            </div>
-          </div>
-          <p className="text-sm text-gray-600 mt-2">Auto‑computed Current Age: <strong>{autoAge}</strong></p>
-        </Section>
 
+      <form onSubmit={handleSubmit} className="space-y-4">
         <Section title="Core Assumptions">
           <div className="grid grid-cols-2 gap-4">
             <label className="block">
-              <div className="text-sm mb-1">Current Age (manual override)</div>
+              <div className="text-sm mb-1">Current Age</div>
               <input className="w-full border rounded-lg px-3 py-2" type="number" value={currentAge} onChange={(e)=>setCurrentAge(Number(e.target.value))} />
             </label>
             <label className="block">
@@ -214,26 +135,21 @@ export default function App() {
           monthlyBenefit={ssMonthly}
           setMonthlyBenefit={setSsMonthly}
         />
-        <div className="flex items-center gap-3 -mt-2 mb-4">
-          <button
-            type="button"
-            onClick={() => setWorked30(!worked30)}
-            className={"px-3 py-2 rounded-lg border " + (worked30 ? "bg-green-100 border-green-400 text-green-800" : "bg-white text-gray-700")}
-            title="If yes, we floor the estimated SS benefit at $1,000/month"
-          >
-            {worked30 ? "✅ Worked 30+ Years" : "Worked 30+ Years?"}
-          </button>
-          <span className="text-sm text-gray-500">Leave SS benefit blank to auto-estimate.</span>
-        </div>
 
         <DebtsSection debts={debts} setDebts={setDebts} />
 
-        <button type="submit" disabled={loading} className="mt-2 px-4 py-2 rounded-xl bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50">
+        <button
+          type="submit"
+          disabled={loading}
+          className="mt-2 px-4 py-2 rounded-xl bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50"
+        >
           {loading ? "Calculating…" : "Calculate"}
         </button>
       </form>
 
-      {error && <div className="mt-4 text-red-600"><strong>Error:</strong> {error}</div>}
+      {error && (
+        <div className="mt-4 text-red-600"><strong>Error:</strong> {error}</div>
+      )}
 
       {result && (
         <div className="mt-4 bg-white shadow-md rounded-2xl p-4">
