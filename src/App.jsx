@@ -77,7 +77,7 @@ export default function App() {
   return (
     <div className="max-w-3xl mx-auto p-6">
       <h1 className="text-3xl font-extrabold mb-2">RetireWise – Retirement Planner</h1>
-      <p className="text-gray-600 mb-6">Enter your details. The app calls your FastAPI backend via <code>VITE_API_BASE_URL</code>.</p>
+      <p className="text-gray-600 mb-6">Enter your details. </p>
 
       <form onSubmit={handleSubmit} className="space-y-4">
         <Section title="Core Assumptions">
