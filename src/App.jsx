@@ -7,6 +7,8 @@ import SocialSecuritySection from "./components/SocialSecuritySection";
 import DebtsSection from "./components/DebtsSection";
 import Section from "./components/Section";
 import ResultsChart from "./components/ResultsChart";
+import DownloadCSVButton from "./components/DownloadCSVButton";
+
 
 // ---------- Date helpers ----------
 function toISODate(d) {
@@ -350,15 +352,22 @@ export default function App() {
           ) : (
             <p className="text-red-600">❌ Not sustainable before age 100. Adjust savings/expenses.</p>
           )}
-
           {result && result.path && result.path.length > 0 && (
             <div className="mt-6">
               <h3 className="text-lg font-semibold mb-2">Portfolio Balance by Age</h3>
               <ResultsChart data={result.path} />
+
+              <div className="mt-2 flex gap-3 items-center">
+                <DownloadCSVButton pathData={result.path} />
+              </div>
             </div>
           )}
+          
         </div>
       )}
     </div>
   );
 }
+
+
+
