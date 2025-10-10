@@ -6,6 +6,7 @@ import PensionSection from "./components/PensionSection";
 import SocialSecuritySection from "./components/SocialSecuritySection";
 import DebtsSection from "./components/DebtsSection";
 import Section from "./components/Section";
+import ResultsChart from "./components/ResultsChart";
 
 // ---------- Date helpers ----------
 function toISODate(d) {
@@ -43,10 +44,10 @@ function ageAtDate(dobStr, dateStr) {
   if (beforeBirthday) age -= 1;
   return age;
 }
-// NEW: compute DOB from an Age, preserving month/day from existing DOB if present.
+// Compute DOB from an Age, preserving month/day from existing DOB when possible.
 function dobFromAge(ageYears, referenceDobStr) {
   const today = new Date();
-  let month = today.getMonth(); // 0-based
+  let month = today.getMonth();
   let day = today.getDate();
   if (referenceDobStr) {
     const ref = parseISODate(referenceDobStr);
@@ -56,9 +57,8 @@ function dobFromAge(ageYears, referenceDobStr) {
   const birthdayHasPassed = today >= birthdayThisYear;
   let year = today.getFullYear() - Number(ageYears);
   if (!birthdayHasPassed) year -= 1;
-  // Handle 2/29 fallback
+  // handle 2/29 fallback
   if (month === 1 && day === 29) {
-    // If not leap year, fallback to 2/28
     const dt = new Date(year, 1, 29);
     if (Number.isNaN(dt.getTime()) || dt.getMonth() !== 1 || dt.getDate() !== 29) {
       return toISODate(new Date(year, 1, 28));
@@ -349,6 +349,13 @@ export default function App() {
             </ul>
           ) : (
             <p className="text-red-600">❌ Not sustainable before age 100. Adjust savings/expenses.</p>
+          )}
+
+          {result && result.path && result.path.length > 0 && (
+            <div className="mt-6">
+              <h3 className="text-lg font-semibold mb-2">Portfolio Balance by Age</h3>
+              <ResultsChart data={result.path} />
+            </div>
           )}
         </div>
       )}
