@@ -2,16 +2,18 @@ import React from "react";
 
 function toCSV(rows) {
   if (!rows || !rows.length) return "";
-  const escape = (v) => {
-    if (v == null) return "";
+  const escapeCSV = (v) => {
+    if (v === null || v === undefined) return "";
     const s = String(v);
-    if (/[",\n]/.test(s)) return \"\" + s.replaceAll(\"\", \"\\"\").replaceAll(\"\\n\", \"\n\") + \"\\";
+    if (s.includes('"') || s.includes(",") || s.includes("\n")) {
+      return '"' + s.replace(/"/g, '""') + '"';
+    }
     return s;
   };
   const header = Object.keys(rows[0]);
-  const lines = [header.map(escape).join(",")];
+  const lines = [header.map(escapeCSV).join(",")];
   for (const r of rows) {
-    lines.push(header.map((h) => escape(r[h])).join(","));
+    lines.push(header.map((h) => escapeCSV(r[h])).join(","));
   }
   return lines.join("\n");
 }
